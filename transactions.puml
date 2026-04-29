@@ -1,0 +1,165 @@
+@startuml TransactionDataModel
+
+!define ENTITY_COLOR #FFF9E6
+!define ENUM_COLOR #E8F4FD
+!define EMBED_COLOR #F0FFF0
+
+skinparam class {
+  BackgroundColor ENTITY_COLOR
+  BorderColor #555
+  ArrowColor #333
+  FontName Arial
+}
+
+skinparam enum {
+  BackgroundColor ENUM_COLOR
+  BorderColor #555
+  FontName Arial
+}
+
+' ─────────────────────────────────────────
+'  Enumerations
+' ─────────────────────────────────────────
+
+enum AccountType {
+  DEFAULT
+}
+
+enum Category {
+  TRADING
+  CASH
+  DELIVERY
+}
+
+enum TransactionType {
+  ' TRADING types
+  BUY
+  SELL
+  ' CASH types
+  CUSTOMER_INPAYMENT
+  CUSTOMER_INBOUND
+  STOCKPERK
+  INTEREST_PAYMENT
+  DIVIDEND
+  CARD_TRANSACTION
+  CARD_TRANSACTION_INTERNATIONAL
+  MIGRATION
+  TRANSFER_INBOUND
+  TRANSFER_INSTANT_INBOUND
+  TRANSFER_INSTANT_OUTBOUND
+  BENEFITS_SAVEBACK
+  TAX_OPTIMIZATION
+  BONUS
+  EARNINGS
+}
+
+enum AssetClass {
+  FUND
+  STOCK
+  DERIVATIVE
+  CRYPTO
+}
+
+' ─────────────────────────────────────────
+'  Embedded Value Objects (no own table)
+' ─────────────────────────────────────────
+
+class FxInfo <<Embeddable>> EMBED_COLOR {
+  +fx_original_amount  : Decimal
+  +fx_original_currency : String[3]
+  +fx_rate             : Decimal
+}
+
+class MccInfo <<Embeddable>> EMBED_COLOR {
+  +mcc_code : String[4]
+  ' Present only for CARD_TRANSACTION
+  ' and CARD_TRANSACTION_INTERNATIONAL
+}
+
+' ─────────────────────────────────────────
+'  Normalised Entities (own tables)
+' ─────────────────────────────────────────
+
+class Asset {
+  +id          : Long  <<PK>>
+  +symbol      : String  <<UNIQUE>>
+  +name        : String
+  +asset_class : AssetClass
+}
+
+class Counterparty {
+  +id   : Long   <<PK>>
+  +iban : String <<UNIQUE>>
+  +name : String
+}
+
+' ─────────────────────────────────────────
+'  Core Entity
+' ─────────────────────────────────────────
+
+class Transaction {
+  +id                  : Long    <<PK>>
+  +transaction_id      : UUID    <<UNIQUE>>
+  +transaction_datetime : DateTime
+  +date                : Date
+  +account_type        : AccountType
+  +category            : Category
+  +type                : TransactionType
+  +amount              : Decimal
+  +fee                 : Decimal
+  +tax                 : Decimal
+  +currency            : String[3]
+  +description         : String
+  ' --- asset position (trading / dividend / migration) ---
+  +asset_id            : Long    <<FK>>
+  +shares              : Decimal
+  +price               : Decimal
+  ' --- counterparty (inbound transfers) ---
+  +counterparty_id     : Long    <<FK>>
+  +payment_reference   : String
+  ' --- card transactions ---
+  +merchant_name       : String
+}
+
+' ─────────────────────────────────────────
+'  Relationships
+' ─────────────────────────────────────────
+
+Transaction "many" --> "0..1" Asset         : asset_id
+Transaction "many" --> "0..1" Counterparty  : counterparty_id
+
+Transaction *-- "0..1" FxInfo   : "present when\noriginal_currency set"
+Transaction *-- "0..1" MccInfo  : "present for\nCARD_TRANSACTION*"
+
+Transaction --> AccountType
+Transaction --> Category
+Transaction --> TransactionType
+Asset       --> AssetClass
+
+' ─────────────────────────────────────────
+'  Notes
+' ─────────────────────────────────────────
+
+note top of Asset
+  <b>3NF: symbol → name, asset_class</b>
+  Extracted to own table to remove
+  transitive dependency from transactions.
+end note
+
+note top of Counterparty
+  <b>3NF: iban → name</b>
+  Extracted to own table to remove
+  transitive dependency from transactions.
+end note
+
+note bottom of Transaction
+  <b>Key constraints</b>
+  • amount: negative = outflow, positive = inflow
+  • fee / tax: optional, negative
+  • shares / price: transaction-specific, stay here
+  • merchant_name: populated for CARD_TRANSACTION*
+  • payment_reference: populated for CUSTOMER_INBOUND etc.
+  • datetime format: yyyy-MM-dd'T'HH:mm:ss[.SSSSSS]'Z'
+end note
+
+@enduml
