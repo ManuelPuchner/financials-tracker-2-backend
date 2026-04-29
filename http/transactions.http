@@ -1,0 +1,172 @@
+@baseUrl = http://localhost:8080
+
+### Create a cash transaction (inpayment)
+POST {{baseUrl}}/api/transactions
+Content-Type: application/json
+
+{
+  "transactionId": "a1b2c3d4-0001-0000-0000-000000000001",
+  "datetime": "2026-01-10T09:00:00Z",
+  "date": "2026-01-10",
+  "accountType": "DEFAULT",
+  "category": "CASH",
+  "type": "CUSTOMER_INPAYMENT",
+  "amount": 2500.00,
+  "fee": null,
+  "tax": null,
+  "currency": "EUR",
+  "description": "Monthly salary"
+}
+
+###
+
+### Create a card transaction
+POST {{baseUrl}}/api/transactions
+Content-Type: application/json
+
+{
+  "transactionId": "a1b2c3d4-0002-0000-0000-000000000002",
+  "datetime": "2026-01-15T14:30:00Z",
+  "date": "2026-01-15",
+  "accountType": "DEFAULT",
+  "category": "CASH",
+  "type": "CARD_TRANSACTION",
+  "amount": 42.80,
+  "fee": null,
+  "tax": null,
+  "currency": "EUR",
+  "description": "Grocery shopping",
+  "merchantName": "REWE",
+  "mccCode": "5411"
+}
+
+###
+
+### Create a BUY trade
+POST {{baseUrl}}/api/transactions
+Content-Type: application/json
+
+{
+  "transactionId": "a1b2c3d4-0003-0000-0000-000000000003",
+  "datetime": "2026-02-01T10:15:00Z",
+  "date": "2026-02-01",
+  "accountType": "DEFAULT",
+  "category": "TRADING",
+  "type": "BUY",
+  "amount": 500.00,
+  "fee": 1.00,
+  "tax": null,
+  "currency": "EUR",
+  "description": "Buy AAPL",
+  "assetSymbol": "AAPL",
+  "assetName": "Apple Inc.",
+  "assetClass": "STOCK",
+  "shares": 3.0,
+  "price": 166.67
+}
+
+###
+
+### Create an international card transaction with FX info
+POST {{baseUrl}}/api/transactions
+Content-Type: application/json
+
+{
+  "transactionId": "a1b2c3d4-0004-0000-0000-000000000004",
+  "datetime": "2026-03-05T18:00:00Z",
+  "date": "2026-03-05",
+  "accountType": "DEFAULT",
+  "category": "CASH",
+  "type": "CARD_TRANSACTION_INTERNATIONAL",
+  "amount": 28.50,
+  "fee": 0.50,
+  "tax": null,
+  "currency": "EUR",
+  "description": "Restaurant in London",
+  "merchantName": "Dishoom",
+  "mccCode": "5812",
+  "fxOriginalAmount": 24.00,
+  "fxOriginalCurrency": "GBP",
+  "fxRate": 1.1875
+}
+
+###
+
+### Get all transactions (default page size 50)
+GET {{baseUrl}}/api/transactions
+
+###
+
+### Get all transactions — page 2, size 10, sorted by date descending
+GET {{baseUrl}}/api/transactions?page=1&size=10&sort=date,desc
+
+###
+
+### Get transaction by UUID
+GET {{baseUrl}}/api/transactions/a1b2c3d4-0001-0000-0000-000000000001
+
+###
+
+### Get transactions by category
+GET {{baseUrl}}/api/transactions/by-category/CASH
+
+###
+
+### Get transactions by category — TRADING
+GET {{baseUrl}}/api/transactions/by-category/TRADING
+
+###
+
+### Get transactions by type
+GET {{baseUrl}}/api/transactions/by-type/CARD_TRANSACTION
+
+###
+
+### Get transactions by type — BUY
+GET {{baseUrl}}/api/transactions/by-type/BUY
+
+###
+
+### Get transactions by MCC code
+GET {{baseUrl}}/api/transactions/by-mcc/5411
+
+###
+
+### Get transactions by date range
+GET {{baseUrl}}/api/transactions/by-date?from=2026-01-01&to=2026-03-31
+
+###
+
+### Import transactions from CSV
+POST {{baseUrl}}/api/transactions/import/csv
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="transactions.csv"
+Content-Type: text/csv
+
+< ../example.csv
+--boundary--
+
+###
+
+### Import Sparkasse transactions from JSON export
+POST {{baseUrl}}/api/transactions/import/sparkasse-json
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="sparkasse.json"
+Content-Type: application/json
+
+< ../sparkasse_example.json
+--boundary--
+
+###
+
+### Search transactions by merchant name (cross-source: TR + Sparkasse)
+GET {{baseUrl}}/api/transactions/by-merchant?q=McDonalds
+
+###
+
+### Merchant search — paginated + sorted
+GET {{baseUrl}}/api/transactions/by-merchant?q=billa&page=0&size=20&sort=date,desc

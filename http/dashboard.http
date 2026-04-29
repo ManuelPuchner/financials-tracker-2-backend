@@ -1,0 +1,19 @@
+@baseUrl = http://localhost:8080
+
+### Overview — cash balance, transaction count, fees & taxes paid
+GET {{baseUrl}}/api/dashboard/overview
+
+###
+
+### Portfolio — cost basis per asset, total invested, dividends received
+GET {{baseUrl}}/api/dashboard/portfolio
+
+###
+
+### Spending — card spend, transfer outflows, top 10 merchants
+GET {{baseUrl}}/api/dashboard/spending
+
+###
+
+### Income — broken down by type (interest, dividends, bonuses, transfers, etc.)
+GET {{baseUrl}}/api/dashboard/income

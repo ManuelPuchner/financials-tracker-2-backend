@@ -1,0 +1,21 @@
+### List all accounts
+GET http://localhost:8080/api/accounts
+Accept: application/json
+
+###
+
+### Get account by ID
+GET http://localhost:8080/api/accounts/1
+Accept: application/json
+
+###
+
+### Update account (name, color, icon)
+PATCH http://localhost:8080/api/accounts/1
+Content-Type: application/json
+
+{
+  "name": "Hauptkonto",
+  "color": "#3b82f6",
+  "icon": "bank"
+}

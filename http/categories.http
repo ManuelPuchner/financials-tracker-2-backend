@@ -1,0 +1,100 @@
+@baseUrl = http://localhost:8080
+
+### Create a category
+POST {{baseUrl}}/api/categories
+Content-Type: application/json
+
+{
+  "name": "Lebensmittel",
+  "color": "#4CAF50",
+  "icon": "shopping-cart"
+}
+
+###
+
+### Create another category
+POST {{baseUrl}}/api/categories
+Content-Type: application/json
+
+{
+  "name": "Restaurants",
+  "color": "#FF5722",
+  "icon": "restaurant"
+}
+
+###
+
+### Get all categories
+GET {{baseUrl}}/api/categories
+
+###
+
+### Get category by ID
+GET {{baseUrl}}/api/categories/1
+
+###
+
+### Update a category
+PUT {{baseUrl}}/api/categories/1
+Content-Type: application/json
+
+{
+  "name": "Lebensmittel & Supermarkt",
+  "color": "#4CAF50",
+  "icon": "shopping-cart"
+}
+
+###
+
+### Delete a category
+DELETE {{baseUrl}}/api/categories/1
+
+###
+
+### Assign MCC 5411 (Grocery Stores) → "Lebensmittel" category (id: 1)
+PUT {{baseUrl}}/api/mcc/5411/category
+Content-Type: application/json
+
+{
+  "categoryId": 1
+}
+
+###
+
+### Assign MCC 5812 (Restaurants) → "Restaurants" category (id: 2)
+PUT {{baseUrl}}/api/mcc/5812/category
+Content-Type: application/json
+
+{
+  "categoryId": 2
+}
+
+###
+
+### Remove category mapping from MCC 5411
+PUT {{baseUrl}}/api/mcc/5411/category
+Content-Type: application/json
+
+{
+  "categoryId": null
+}
+
+###
+
+### Assign user category to a transaction
+PATCH {{baseUrl}}/api/transactions/a1b2c3d4-0001-0000-0000-000000000001/category
+Content-Type: application/json
+
+{
+  "categoryId": 1
+}
+
+###
+
+### Remove user category from a transaction
+PATCH {{baseUrl}}/api/transactions/a1b2c3d4-0001-0000-0000-000000000001/category
+Content-Type: application/json
+
+{
+  "categoryId": null
+}

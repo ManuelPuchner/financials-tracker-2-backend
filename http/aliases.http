@@ -1,0 +1,36 @@
+### List all merchant aliases
+GET http://localhost:8080/api/merchant-aliases
+Accept: application/json
+
+###
+
+### Get alias by ID
+GET http://localhost:8080/api/merchant-aliases/1
+Accept: application/json
+
+###
+
+### Create alias (normalizes "McDonalds 47", "McDonalds 126" etc. to "McDonald's")
+POST http://localhost:8080/api/merchant-aliases
+Content-Type: application/json
+
+{
+  "pattern": "(?i)^mcdonalds",
+  "canonicalName": "McDonald's"
+}
+
+###
+
+### Update alias
+PUT http://localhost:8080/api/merchant-aliases/1
+Content-Type: application/json
+
+{
+  "pattern": "(?i)^mcdonald",
+  "canonicalName": "McDonald's"
+}
+
+###
+
+### Delete alias (does not revert already-renamed transactions)
+DELETE http://localhost:8080/api/merchant-aliases/1
