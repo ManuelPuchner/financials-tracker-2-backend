@@ -1,4 +1,4 @@
-package com.manuelpuchner.backend.sparkasserule.entity;
+package com.manuelpuchner.backend.transactionrule.entity;
 
 import com.manuelpuchner.backend.usercategory.entity.UserCategory;
 import jakarta.persistence.*;
@@ -14,7 +14,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SparkasseRule {
+public class TransactionRule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -99,7 +99,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
            "WHERE t.mccCode.mcc = :mcc AND t.userCategory IS NULL")
     int retroactivelyAssignByMcc(@Param("mcc") String mcc, @Param("categoryId") Long categoryId);
 
-    // Bulk category assignment used by Sparkasse-rule retroactive pass
+    // Bulk category assignment used by transaction-rule retroactive pass
     @Modifying
     @Query("UPDATE Transaction t SET t.userCategory.id = :catId WHERE t.id IN :ids AND t.userCategory IS NULL")
     int bulkAssignCategory(@Param("ids") Collection<Long> ids, @Param("catId") Long catId);
@@ -109,7 +109,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("UPDATE Transaction t SET t.merchantName = :canonical WHERE t.id IN :ids")
     int bulkRenameMerchants(@Param("ids") Collection<Long> ids, @Param("canonical") String canonical);
 
-    // Candidate load for Sparkasse rule retroactive pass (Sparkasse + TR card payments)
+    // Candidate load for transaction rule retroactive pass (Sparkasse + TR card payments)
     @Query("""
             SELECT new com.manuelpuchner.backend.transaction.repository.RecategorizationCandidate(
                 t.id, t.description, t.merchantName, c.name
@@ -121,7 +121,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                                       com.manuelpuchner.backend.transaction.entity.TransactionType.CARD_TRANSACTION_INTERNATIONAL)))
               AND t.userCategory IS NULL
             """)
-    List<RecategorizationCandidate> findSparkasseCandidates();
+    List<RecategorizationCandidate> findTransactionRuleCandidates();
 
     // Candidate load for asset rule retroactive pass
     @Query("""

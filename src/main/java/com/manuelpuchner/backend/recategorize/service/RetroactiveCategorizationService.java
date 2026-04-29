@@ -3,8 +3,8 @@ package com.manuelpuchner.backend.recategorize.service;
 import com.manuelpuchner.backend.assetrule.entity.AssetRule;
 import com.manuelpuchner.backend.assetrule.entity.AssetRuleTargetField;
 import com.manuelpuchner.backend.merchantalias.entity.MerchantAlias;
-import com.manuelpuchner.backend.sparkasserule.entity.RuleTargetField;
-import com.manuelpuchner.backend.sparkasserule.entity.SparkasseRule;
+import com.manuelpuchner.backend.transactionrule.entity.RuleTargetField;
+import com.manuelpuchner.backend.transactionrule.entity.TransactionRule;
 import com.manuelpuchner.backend.transaction.repository.AssetCandidate;
 import com.manuelpuchner.backend.transaction.repository.TransactionRepository;
 import com.manuelpuchner.backend.transaction.repository.RecategorizationCandidate;
@@ -32,8 +32,8 @@ public class RetroactiveCategorizationService {
     }
 
     @Transactional
-    public void applySparkasseRule(SparkasseRule rule) {
-        List<RecategorizationCandidate> candidates = transactionRepository.findSparkasseCandidates();
+    public void applyTransactionRule(TransactionRule rule) {
+        List<RecategorizationCandidate> candidates = transactionRepository.findTransactionRuleCandidates();
         Pattern compiled = Pattern.compile(rule.getPattern());
         Long catId = rule.getUserCategory().getId();
 
@@ -46,7 +46,7 @@ public class RetroactiveCategorizationService {
 
         if (!matchedIds.isEmpty()) {
             int updated = transactionRepository.bulkAssignCategory(matchedIds, catId);
-            log.info("[Retroactive] SparkasseRule id={} categoryId={} updated={}", rule.getId(), catId, updated);
+            log.info("[Retroactive] TransactionRule id={} categoryId={} updated={}", rule.getId(), catId, updated);
         }
     }
 

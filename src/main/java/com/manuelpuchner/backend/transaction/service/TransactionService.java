@@ -12,7 +12,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manuelpuchner.backend.assetrule.service.AssetRuleService;
 import com.manuelpuchner.backend.merchantalias.service.MerchantAliasService;
-import com.manuelpuchner.backend.sparkasserule.service.SparkasseRuleService;
+import com.manuelpuchner.backend.transactionrule.service.TransactionRuleService;
 import com.manuelpuchner.backend.transaction.dto.*;
 import com.manuelpuchner.backend.transaction.entity.*;
 import com.manuelpuchner.backend.transaction.repository.TransactionRepository;
@@ -52,7 +52,7 @@ public class TransactionService {
     private final ObjectMapper objectMapper;
     private final AccountService accountService;
     private final MerchantAliasService merchantAliasService;
-    private final SparkasseRuleService sparkasseRuleService;
+    private final TransactionRuleService transactionRuleService;
     private final AssetRuleService assetRuleService;
 
     @Transactional(readOnly = true)
@@ -413,8 +413,8 @@ public class TransactionService {
         // 1. Apply merchant alias
         String merchantName = applyAlias(rawMerchantName);
 
-        // 2. Apply Sparkasse rule if no category yet
-        UserCategory userCategory = sparkasseRuleService
+        // 2. Apply transaction rule if no category yet
+        UserCategory userCategory = transactionRuleService
                 .firstMatch(partnerNameForRule, counterpartyNameForRule, r.getReference())
                 .orElse(null);
 
@@ -531,12 +531,12 @@ public class TransactionService {
 
         UserCategory userCategory;
         if (isCard) {
-            // Sparkasse rules override MCC for card payments
-            userCategory = sparkasseRuleService
+            // transaction rules override MCC for card payments
+            userCategory = transactionRuleService
                     .firstMatch(merchantName, null, r.description())
                     .orElseGet(() -> mcc != null ? mcc.getUserCategory() : null);
         } else if (asset != null && asset.getAssetClass() != null) {
-            // Asset rules for investment transactions; excluded from Sparkasse rules
+            // Asset rules for investment transactions; excluded from transaction rules
             userCategory = assetRuleService
                     .firstMatch(asset.getAssetClass(), asset.getSymbol(), asset.getName())
                     .orElse(null);

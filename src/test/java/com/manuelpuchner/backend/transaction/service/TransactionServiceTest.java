@@ -8,7 +8,7 @@ import com.manuelpuchner.backend.asset.repository.AssetRepository;
 import com.manuelpuchner.backend.counterparty.repository.CounterpartyRepository;
 import com.manuelpuchner.backend.mcc.repository.MccCodeRepository;
 import com.manuelpuchner.backend.merchantalias.service.MerchantAliasService;
-import com.manuelpuchner.backend.sparkasserule.service.SparkasseRuleService;
+import com.manuelpuchner.backend.transactionrule.service.TransactionRuleService;
 import com.manuelpuchner.backend.transaction.dto.CsvImportResult;
 import com.manuelpuchner.backend.transaction.dto.CsvRow;
 import com.manuelpuchner.backend.transaction.dto.TransactionResponse;
@@ -48,7 +48,7 @@ class TransactionServiceTest {
     @Mock TransactionCsvParser csvParser;
     @Mock AccountService accountService;
     @Mock MerchantAliasService merchantAliasService;
-    @Mock SparkasseRuleService sparkasseRuleService;
+    @Mock TransactionRuleService transactionRuleService;
 
     private TransactionService service;
     private final UUID txId = UUID.randomUUID();
@@ -59,7 +59,7 @@ class TransactionServiceTest {
                 transactionRepository, assetRepository, counterpartyRepository,
                 mccCodeRepository, userCategoryRepository, new TransactionMapper(),
                 csvParser, new com.fasterxml.jackson.databind.ObjectMapper(),
-                accountService, merchantAliasService, sparkasseRuleService);
+                accountService, merchantAliasService, transactionRuleService);
     }
 
     private Transaction buildTransaction(UUID id) {

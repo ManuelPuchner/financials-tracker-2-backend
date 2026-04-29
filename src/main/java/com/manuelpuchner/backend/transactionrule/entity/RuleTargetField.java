@@ -1,4 +1,4 @@
-package com.manuelpuchner.backend.sparkasserule.entity;
+package com.manuelpuchner.backend.transactionrule.entity;
 
 public enum RuleTargetField {
     PARTNER_NAME,

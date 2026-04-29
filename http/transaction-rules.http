@@ -1,17 +1,17 @@
 ### List all Sparkasse rules (ordered by priority ASC, id ASC)
-GET http://localhost:8080/api/sparkasse-rules
+GET http://localhost:8080/api/transaction-rules
 Accept: application/json
 
 ###
 
 ### Get rule by ID
-GET http://localhost:8080/api/sparkasse-rules/1
+GET http://localhost:8080/api/transaction-rules/1
 Accept: application/json
 
 ###
 
 ### Create rule — match BILLA in partner name or reference
-POST http://localhost:8080/api/sparkasse-rules
+POST http://localhost:8080/api/transaction-rules
 Content-Type: application/json
 
 {
@@ -24,7 +24,7 @@ Content-Type: application/json
 ###
 
 ### Update rule
-PUT http://localhost:8080/api/sparkasse-rules/1
+PUT http://localhost:8080/api/transaction-rules/1
 Content-Type: application/json
 
 {
@@ -37,4 +37,4 @@ Content-Type: application/json
 ###
 
 ### Delete rule (existing categorized transactions are NOT un-tagged)
-DELETE http://localhost:8080/api/sparkasse-rules/1
+DELETE http://localhost:8080/api/transaction-rules/1

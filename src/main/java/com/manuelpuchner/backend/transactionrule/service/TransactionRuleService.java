@@ -1,10 +1,10 @@
-package com.manuelpuchner.backend.sparkasserule.service;
+package com.manuelpuchner.backend.transactionrule.service;
 
 import com.manuelpuchner.backend.recategorize.service.RetroactiveCategorizationService;
-import com.manuelpuchner.backend.sparkasserule.dto.SparkasseRuleRequest;
-import com.manuelpuchner.backend.sparkasserule.dto.SparkasseRuleResponse;
-import com.manuelpuchner.backend.sparkasserule.entity.SparkasseRule;
-import com.manuelpuchner.backend.sparkasserule.repository.SparkasseRuleRepository;
+import com.manuelpuchner.backend.transactionrule.dto.TransactionRuleRequest;
+import com.manuelpuchner.backend.transactionrule.dto.TransactionRuleResponse;
+import com.manuelpuchner.backend.transactionrule.entity.TransactionRule;
+import com.manuelpuchner.backend.transactionrule.repository.TransactionRuleRepository;
 import com.manuelpuchner.backend.usercategory.dto.UserCategoryResponse;
 import com.manuelpuchner.backend.usercategory.entity.UserCategory;
 import com.manuelpuchner.backend.usercategory.repository.UserCategoryRepository;
@@ -21,68 +21,68 @@ import java.util.regex.PatternSyntaxException;
 
 @Slf4j
 @Service
-public class SparkasseRuleService {
+public class TransactionRuleService {
 
-    private final SparkasseRuleRepository repository;
+    private final TransactionRuleRepository repository;
     private final UserCategoryRepository userCategoryRepository;
     private final RetroactiveCategorizationService retroactiveService;
 
     private volatile List<CompiledRule> cache = List.of();
 
-    public SparkasseRuleService(SparkasseRuleRepository repository,
-                                UserCategoryRepository userCategoryRepository,
-                                RetroactiveCategorizationService retroactiveService) {
+    public TransactionRuleService(TransactionRuleRepository repository,
+                                  UserCategoryRepository userCategoryRepository,
+                                  RetroactiveCategorizationService retroactiveService) {
         this.repository = repository;
         this.userCategoryRepository = userCategoryRepository;
         this.retroactiveService = retroactiveService;
     }
 
     @Transactional(readOnly = true)
-    public List<SparkasseRuleResponse> findAll() {
+    public List<TransactionRuleResponse> findAll() {
         return repository.findAllByOrderByPriorityAscIdAsc().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public SparkasseRuleResponse findById(Long id) {
+    public TransactionRuleResponse findById(Long id) {
         return repository.findById(id)
                 .map(this::toResponse)
-                .orElseThrow(() -> new EntityNotFoundException("SparkasseRule not found: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("TransactionRule not found: " + id));
     }
 
     @Transactional
-    public SparkasseRuleResponse create(SparkasseRuleRequest request) {
+    public TransactionRuleResponse create(TransactionRuleRequest request) {
         validatePattern(request.pattern());
         UserCategory category = resolveCategory(request.userCategoryId());
-        SparkasseRule saved = repository.save(SparkasseRule.builder()
+        TransactionRule saved = repository.save(TransactionRule.builder()
                 .pattern(request.pattern())
                 .targetField(request.targetField())
                 .userCategory(category)
                 .priority(request.priority() != null ? request.priority() : 100)
                 .build());
         invalidateCache();
-        retroactiveService.applySparkasseRule(saved);
+        retroactiveService.applyTransactionRule(saved);
         return toResponse(saved);
     }
 
     @Transactional
-    public SparkasseRuleResponse update(Long id, SparkasseRuleRequest request) {
+    public TransactionRuleResponse update(Long id, TransactionRuleRequest request) {
         validatePattern(request.pattern());
-        SparkasseRule rule = repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("SparkasseRule not found: " + id));
+        TransactionRule rule = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("TransactionRule not found: " + id));
         rule.setPattern(request.pattern());
         rule.setTargetField(request.targetField());
         rule.setUserCategory(resolveCategory(request.userCategoryId()));
         if (request.priority() != null) rule.setPriority(request.priority());
-        SparkasseRule saved = repository.save(rule);
+        TransactionRule saved = repository.save(rule);
         invalidateCache();
-        retroactiveService.applySparkasseRule(saved);
+        retroactiveService.applyTransactionRule(saved);
         return toResponse(saved);
     }
 
     @Transactional
     public void delete(Long id) {
         if (!repository.existsById(id)) {
-            throw new EntityNotFoundException("SparkasseRule not found: " + id);
+            throw new EntityNotFoundException("TransactionRule not found: " + id);
         }
         repository.deleteById(id);
         invalidateCache();
@@ -104,11 +104,11 @@ public class SparkasseRuleService {
 
     private synchronized void refreshCache() {
         List<CompiledRule> compiled = new ArrayList<>();
-        for (SparkasseRule rule : repository.findAllByOrderByPriorityAscIdAsc()) {
+        for (TransactionRule rule : repository.findAllByOrderByPriorityAscIdAsc()) {
             try {
                 compiled.add(new CompiledRule(Pattern.compile(rule.getPattern()), rule.getTargetField(), rule.getUserCategory()));
             } catch (PatternSyntaxException e) {
-                log.warn("Skipping SparkasseRule id={} — invalid pattern: {}", rule.getId(), e.getMessage());
+                log.warn("Skipping TransactionRule id={} — invalid pattern: {}", rule.getId(), e.getMessage());
             }
         }
         cache = compiled;
@@ -131,9 +131,9 @@ public class SparkasseRuleService {
                 .orElseThrow(() -> new EntityNotFoundException("UserCategory not found: " + id));
     }
 
-    private SparkasseRuleResponse toResponse(SparkasseRule r) {
+    private TransactionRuleResponse toResponse(TransactionRule r) {
         UserCategory uc = r.getUserCategory();
-        return SparkasseRuleResponse.builder()
+        return TransactionRuleResponse.builder()
                 .id(r.getId())
                 .pattern(r.getPattern())
                 .targetField(r.getTargetField())
@@ -149,7 +149,7 @@ public class SparkasseRuleService {
                 .build();
     }
 
-    private record CompiledRule(Pattern pattern, com.manuelpuchner.backend.sparkasserule.entity.RuleTargetField targetField, UserCategory category) {
+    private record CompiledRule(Pattern pattern, com.manuelpuchner.backend.transactionrule.entity.RuleTargetField targetField, UserCategory category) {
         boolean matches(String partnerName, String counterpartyName, String reference) {
             return switch (targetField) {
                 case PARTNER_NAME -> partnerName != null && pattern.matcher(partnerName).find();
