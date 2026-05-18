@@ -1,11 +1,14 @@
 package com.manuelpuchner.backend.transaction.service;
 
 import com.manuelpuchner.backend.account.entity.Account;
+import com.manuelpuchner.backend.account.repository.AccountRepository;
 import com.manuelpuchner.backend.account.service.AccountService;
 import com.manuelpuchner.backend.asset.entity.Asset;
 import com.manuelpuchner.backend.asset.entity.AssetClass;
 import com.manuelpuchner.backend.asset.repository.AssetRepository;
+import com.manuelpuchner.backend.assetrule.service.AssetRuleService;
 import com.manuelpuchner.backend.counterparty.repository.CounterpartyRepository;
+import com.manuelpuchner.backend.counterpartymerchant.service.CounterpartyMerchantMappingService;
 import com.manuelpuchner.backend.mcc.repository.MccCodeRepository;
 import com.manuelpuchner.backend.merchantalias.service.MerchantAliasService;
 import com.manuelpuchner.backend.transactionrule.service.TransactionRuleService;
@@ -44,11 +47,14 @@ class TransactionServiceTest {
     @Mock AssetRepository assetRepository;
     @Mock CounterpartyRepository counterpartyRepository;
     @Mock MccCodeRepository mccCodeRepository;
+    @Mock AccountRepository accountRepository;
     @Mock UserCategoryRepository userCategoryRepository;
     @Mock TransactionCsvParser csvParser;
     @Mock AccountService accountService;
     @Mock MerchantAliasService merchantAliasService;
+    @Mock CounterpartyMerchantMappingService counterpartyMerchantMappingService;
     @Mock TransactionRuleService transactionRuleService;
+    @Mock AssetRuleService assetRuleService;
 
     private TransactionService service;
     private final UUID txId = UUID.randomUUID();
@@ -57,9 +63,10 @@ class TransactionServiceTest {
     void setUp() {
         service = new TransactionService(
                 transactionRepository, assetRepository, counterpartyRepository,
-                mccCodeRepository, userCategoryRepository, new TransactionMapper(),
+                mccCodeRepository, accountRepository, userCategoryRepository, new TransactionMapper(),
                 csvParser, new com.fasterxml.jackson.databind.ObjectMapper(),
-                accountService, merchantAliasService, transactionRuleService);
+                accountService, merchantAliasService, counterpartyMerchantMappingService,
+                transactionRuleService, assetRuleService);
     }
 
     private Transaction buildTransaction(UUID id) {

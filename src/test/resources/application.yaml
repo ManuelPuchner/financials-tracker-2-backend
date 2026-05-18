@@ -8,3 +8,10 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
+
+app:
+  auth:
+    username: testuser
+    password: testpass
+    jwt-secret: test-secret-key-that-is-long-enough-for-hmac
+    jwt-expiration-ms: 3600000

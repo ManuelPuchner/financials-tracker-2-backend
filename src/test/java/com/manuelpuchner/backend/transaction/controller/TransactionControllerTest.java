@@ -23,17 +23,23 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.manuelpuchner.backend.auth.JwtUtil;
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(TransactionController.class)
+@WithMockUser
 class TransactionControllerTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockitoBean TransactionService service;
+    @MockitoBean JwtUtil jwtUtil;
 
     private final UUID txId = UUID.fromString("ed915aa4-c463-4b3d-bafa-92b54245d5e4");
 
@@ -87,7 +93,7 @@ class TransactionControllerTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "transactions.csv", MediaType.TEXT_PLAIN_VALUE, "csv".getBytes());
 
-        mockMvc.perform(multipart("/api/transactions/import/csv").file(file))
+        mockMvc.perform(multipart("/api/transactions/import/csv").file(file).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(10))
                 .andExpect(jsonPath("$.imported").value(8))
