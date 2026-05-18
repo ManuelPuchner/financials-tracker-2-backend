@@ -24,9 +24,18 @@ spring:
 server:
   port: 8080
 
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 app:
   auth:
-    username: ${APP_USERNAME:admin}
-    password: ${APP_PASSWORD:admin}
+    username: ${JWT_USERNAME:admin}
+    password: ${JWT_PASSWORD:admin}
     jwt-secret: ${JWT_SECRET:changeme-use-a-long-random-secret-in-production}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
