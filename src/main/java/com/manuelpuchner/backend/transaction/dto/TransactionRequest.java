@@ -3,6 +3,7 @@ package com.manuelpuchner.backend.transaction.dto;
 import com.manuelpuchner.backend.asset.entity.AssetClass;
 import com.manuelpuchner.backend.transaction.entity.AccountType;
 import com.manuelpuchner.backend.transaction.entity.Category;
+import com.manuelpuchner.backend.transaction.entity.TransactionSource;
 import com.manuelpuchner.backend.transaction.entity.TransactionType;
 import jakarta.validation.constraints.NotNull;
 
@@ -13,6 +14,8 @@ import java.util.UUID;
 
 public record TransactionRequest(
         @NotNull UUID transactionId,
+        Long accountId,
+        TransactionSource transactionSource,
 
         @NotNull Instant datetime,
         @NotNull LocalDate date,

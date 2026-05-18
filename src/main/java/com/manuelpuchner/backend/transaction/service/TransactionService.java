@@ -1,6 +1,7 @@
 package com.manuelpuchner.backend.transaction.service;
 
 import com.manuelpuchner.backend.account.entity.Account;
+import com.manuelpuchner.backend.account.repository.AccountRepository;
 import com.manuelpuchner.backend.account.service.AccountService;
 import com.manuelpuchner.backend.asset.entity.Asset;
 import com.manuelpuchner.backend.asset.repository.AssetRepository;
@@ -11,6 +12,7 @@ import com.manuelpuchner.backend.mcc.repository.MccCodeRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manuelpuchner.backend.assetrule.service.AssetRuleService;
+import com.manuelpuchner.backend.counterpartymerchant.service.CounterpartyMerchantMappingService;
 import com.manuelpuchner.backend.merchantalias.service.MerchantAliasService;
 import com.manuelpuchner.backend.transactionrule.service.TransactionRuleService;
 import com.manuelpuchner.backend.transaction.dto.*;
@@ -46,12 +48,14 @@ public class TransactionService {
     private final AssetRepository assetRepository;
     private final CounterpartyRepository counterpartyRepository;
     private final MccCodeRepository mccCodeRepository;
+    private final AccountRepository accountRepository;
     private final UserCategoryRepository userCategoryRepository;
     private final TransactionMapper mapper;
     private final TransactionCsvParser csvParser;
     private final ObjectMapper objectMapper;
     private final AccountService accountService;
     private final MerchantAliasService merchantAliasService;
+    private final CounterpartyMerchantMappingService counterpartyMerchantMappingService;
     private final TransactionRuleService transactionRuleService;
     private final AssetRuleService assetRuleService;
 
@@ -92,6 +96,16 @@ public class TransactionService {
         return transactionRepository.findByMerchant(q, pageable).map(mapper::toResponse);
     }
 
+    @Transactional(readOnly = true)
+    public Page<TransactionResponse> findByUserCategoryId(Long userCategoryId, Pageable pageable) {
+        return transactionRepository.findByUserCategory_Id(userCategoryId, pageable).map(mapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TransactionResponse> findByAccountId(Long accountId, Pageable pageable) {
+        return transactionRepository.findByAccount_Id(accountId, pageable).map(mapper::toResponse);
+    }
+
     @Transactional
     public TransactionResponse create(TransactionRequest req) {
         if (transactionRepository.existsByTransactionId(req.transactionId())) {
@@ -109,14 +123,22 @@ public class TransactionService {
                 ? mccCodeRepository.findById(req.mccCode()).orElse(null)
                 : null;
 
-        String merchantName = applyAlias(req.merchantName());
+        String rawMerchantName = req.merchantName();
+        String merchantName = applyAlias(rawMerchantName);
         UserCategory userCategory = mccCode != null ? mccCode.getUserCategory() : null;
 
-        Account account = accountService.resolveOrCreate(TransactionSource.TRADE_REPUBLIC, null);
+        Account account = req.accountId() != null
+                ? accountRepository.findById(req.accountId())
+                        .orElseThrow(() -> new EntityNotFoundException("Account not found: " + req.accountId()))
+                : accountService.resolveOrCreate(TransactionSource.TRADE_REPUBLIC, null);
+
+        TransactionSource source = req.transactionSource() != null
+                ? req.transactionSource()
+                : account.getSource();
 
         Transaction transaction = Transaction.builder()
                 .transactionId(req.transactionId())
-                .source(TransactionSource.TRADE_REPUBLIC)
+                .source(source)
                 .datetime(req.datetime())
                 .date(req.date())
                 .accountType(req.accountType())
@@ -133,6 +155,7 @@ public class TransactionService {
                 .counterparty(counterparty)
                 .paymentReference(req.paymentReference())
                 .merchantName(merchantName)
+                .rawMerchantName(rawMerchantName)
                 .fxInfo(fxInfo)
                 .mccCode(mccCode)
                 .userCategory(userCategory)
@@ -410,8 +433,13 @@ public class TransactionService {
             partnerNameForRule = r.getPartnerName();
         }
 
-        // 1. Apply merchant alias
+        // 1. Apply merchant alias (rawMerchantName preserved as-is)
         String merchantName = applyAlias(rawMerchantName);
+
+        // 2. If no merchant name resolved and a counterparty merchant mapping exists, use it
+        if (merchantName == null && counterparty != null) {
+            merchantName = counterpartyMerchantMappingService.resolveMerchantName(counterparty.getId()).orElse(null);
+        }
 
         // 2. Apply transaction rule if no category yet
         UserCategory userCategory = transactionRuleService
@@ -441,6 +469,7 @@ public class TransactionService {
                 .description(r.getReference())
                 .note(r.getNote())
                 .merchantName(merchantName)
+                .rawMerchantName(rawMerchantName)
                 .counterparty(counterparty)
                 .paymentReference(r.getReferenceNumber() != null ? r.getReferenceNumber() : r.getReference())
                 .ownAccountIban(r.getOwnerAccountNumber())
@@ -448,6 +477,7 @@ public class TransactionService {
                 .sepaMandateId(r.getSepaMandateId())
                 .sepaCreditorId(r.getSepaCreditorId())
                 .paymentMethod(r.getPaymentMethod())
+                .receiverReference(r.getReceiverReference())
                 .userCategory(userCategory)
                 .account(account)
                 .build();
@@ -523,7 +553,8 @@ public class TransactionService {
                 : null;
 
         MccCode mcc = r.mccCode() != null ? mccCodes.get(r.mccCode()) : null;
-        String merchantName = applyAlias(r.merchantName());
+        String rawMerchantNameCsv = r.merchantName();
+        String merchantName = applyAlias(rawMerchantNameCsv);
         Asset asset = r.assetSymbol() != null ? assets.get(r.assetSymbol()) : null;
 
         boolean isCard = r.type() == TransactionType.CARD_TRANSACTION
@@ -563,6 +594,7 @@ public class TransactionService {
                 .counterparty(r.counterpartyIban() != null ? counterparties.get(r.counterpartyIban()) : null)
                 .paymentReference(r.paymentReference())
                 .merchantName(merchantName)
+                .rawMerchantName(rawMerchantNameCsv)
                 .fxInfo(fxInfo)
                 .mccCode(mcc)
                 .userCategory(userCategory)

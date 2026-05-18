@@ -77,6 +77,20 @@ public class TransactionController {
         return service.findByDateRange(from, to, pageable);
     }
 
+    @GetMapping("/by-account/{accountId}")
+    public Page<TransactionResponse> getByAccount(
+            @PathVariable Long accountId,
+            @PageableDefault(size = 50, sort = {"datetime", "id"}, direction = Sort.Direction.ASC) Pageable pageable) {
+        return service.findByAccountId(accountId, pageable);
+    }
+
+    @GetMapping("/by-user-category/{userCategoryId}")
+    public Page<TransactionResponse> getByUserCategory(
+            @PathVariable Long userCategoryId,
+            @PageableDefault(size = 50, sort = {"datetime", "id"}, direction = Sort.Direction.ASC) Pageable pageable) {
+        return service.findByUserCategoryId(userCategoryId, pageable);
+    }
+
     @GetMapping("/by-merchant")
     public Page<TransactionResponse> getByMerchant(
             @RequestParam String q,

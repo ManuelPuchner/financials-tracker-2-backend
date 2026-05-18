@@ -32,6 +32,7 @@ public record TransactionResponse(
         FxInfoDto fxInfo,
         CounterpartyInfoDto counterpartyInfo,
         String merchantName,
+        String rawMerchantName,
         MccCodeDto mccCode,
         UserCategoryResponse userCategory,
         AccountSummaryDto account,
@@ -39,5 +40,6 @@ public record TransactionResponse(
         String ownAccountName,
         String sepaMandateId,
         String sepaCreditorId,
-        String paymentMethod
+        String paymentMethod,
+        String receiverReference
 ) {}

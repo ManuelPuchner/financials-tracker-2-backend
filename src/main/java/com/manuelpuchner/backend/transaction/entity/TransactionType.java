@@ -17,5 +17,6 @@ public enum TransactionType {
     BENEFITS_SAVEBACK,
     TAX_OPTIMIZATION,
     BONUS,
-    EARNINGS
+    EARNINGS,
+    SPLIT
 }

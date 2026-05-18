@@ -1,7 +1,11 @@
 package com.manuelpuchner.backend.transaction.repository;
 
+import com.manuelpuchner.backend.asset.dto.AssetSummaryProjection;
+import com.manuelpuchner.backend.common.dto.EntityStatsDto;
+import com.manuelpuchner.backend.counterparty.dto.CounterpartySummaryProjection;
 import com.manuelpuchner.backend.dashboard.dto.AssetPositionDto;
 import com.manuelpuchner.backend.dashboard.dto.TopMerchantDto;
+import com.manuelpuchner.backend.merchant.dto.MerchantSummaryProjection;
 import com.manuelpuchner.backend.transaction.entity.Category;
 import com.manuelpuchner.backend.transaction.entity.Transaction;
 import com.manuelpuchner.backend.transaction.entity.TransactionSource;
@@ -38,6 +42,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Page<Transaction> findByDateBetween(LocalDate from, LocalDate to, Pageable pageable);
 
     Page<Transaction> findByMccCode_Mcc(String mcc, Pageable pageable);
+
+    Page<Transaction> findByUserCategory_Id(Long userCategoryId, Pageable pageable);
+
+    Page<Transaction> findByAccount_Id(Long accountId, Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount IS NOT NULL" +
            " AND (:accountId IS NULL OR t.account.id = :accountId)")
@@ -109,6 +117,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("UPDATE Transaction t SET t.merchantName = :canonical WHERE t.id IN :ids")
     int bulkRenameMerchants(@Param("ids") Collection<Long> ids, @Param("canonical") String canonical);
 
+    // Counterparty-merchant mapping: set merchant_name for all counterparty transactions
+    @Modifying
+    @Query("UPDATE Transaction t SET t.merchantName = :merchantName WHERE t.counterparty.id = :counterpartyId")
+    int bulkSetMerchantNameByCounterparty(@Param("counterpartyId") Long counterpartyId, @Param("merchantName") String merchantName);
+
+    // Counterparty-merchant mapping: clear merchant_name when mapping is deleted
+    // Only clears rows where raw_merchant_name is null (counterparty-sourced, not real card merchant transactions)
+    @Modifying
+    @Query("UPDATE Transaction t SET t.merchantName = NULL WHERE t.counterparty.id = :counterpartyId AND t.rawMerchantName IS NULL AND t.merchantName = :merchantName")
+    int bulkClearMerchantNameByCounterparty(@Param("counterpartyId") Long counterpartyId, @Param("merchantName") String merchantName);
+
     // Candidate load for transaction rule retroactive pass (Sparkasse + TR card payments)
     @Query("""
             SELECT new com.manuelpuchner.backend.transaction.repository.RecategorizationCandidate(
@@ -134,6 +153,165 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
               AND t.userCategory IS NULL
             """)
     List<AssetCandidate> findAssetCandidatesByClass(@Param("assetClass") com.manuelpuchner.backend.asset.entity.AssetClass assetClass);
+
+    // --- Counterparty queries ---
+
+    @Query("""
+            SELECT t.counterparty.id as id, t.counterparty.iban as iban, t.counterparty.name as name,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
+                   ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
+                   COALESCE(SUM(t.amount), 0) as net,
+                   COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.counterparty IS NOT NULL
+              AND (:q IS NULL OR LOWER(t.counterparty.name) LIKE LOWER(CONCAT('%', :q, '%'))
+                              OR LOWER(t.counterparty.iban) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (:ibanPrefixPattern IS NULL OR t.counterparty.iban LIKE :ibanPrefixPattern)
+            GROUP BY t.counterparty.id, t.counterparty.iban, t.counterparty.name
+            ORDER BY ABS(SUM(t.amount)) DESC
+            """)
+    Page<CounterpartySummaryProjection> searchCounterpartyStats(@Param("q") String q, @Param("ibanPrefixPattern") String ibanPrefixPattern, Pageable pageable);
+
+    @Query("""
+            SELECT t.counterparty.id as id, t.counterparty.iban as iban, t.counterparty.name as name,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
+                   ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
+                   COALESCE(SUM(t.amount), 0) as net,
+                   COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.counterparty IS NOT NULL
+              AND (:ibanPrefixPattern IS NULL OR t.counterparty.iban LIKE :ibanPrefixPattern)
+            GROUP BY t.counterparty.id, t.counterparty.iban, t.counterparty.name
+            ORDER BY ABS(SUM(t.amount)) DESC
+            """)
+    Page<CounterpartySummaryProjection> findAllCounterpartyStats(@Param("ibanPrefixPattern") String ibanPrefixPattern, Pageable pageable);
+
+    @Query("""
+            SELECT t FROM Transaction t
+            WHERE t.counterparty.id = :counterpartyId
+              AND (:accountId IS NULL OR t.account.id = :accountId)
+            ORDER BY t.date DESC, t.datetime DESC
+            """)
+    Page<Transaction> findByCounterpartyId(@Param("counterpartyId") Long counterpartyId,
+                                           @Param("accountId") Long accountId, Pageable pageable);
+
+    @Query("""
+            SELECT new com.manuelpuchner.backend.common.dto.EntityStatsDto(
+                COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0),
+                ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)),
+                COALESCE(SUM(t.amount), 0),
+                COUNT(t)
+            )
+            FROM Transaction t
+            WHERE t.counterparty.id = :counterpartyId
+              AND (:accountId IS NULL OR t.account.id = :accountId)
+            """)
+    EntityStatsDto statsForCounterparty(@Param("counterpartyId") Long counterpartyId,
+                                        @Param("accountId") Long accountId);
+
+    // --- Asset queries ---
+
+    @Query("""
+            SELECT t.asset.id as id, t.asset.symbol as symbol, t.asset.name as name, t.asset.assetClass as assetClass,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
+                   ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
+                   COALESCE(SUM(t.amount), 0) as net,
+                   COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.asset IS NOT NULL
+              AND (:q IS NULL OR LOWER(t.asset.name) LIKE LOWER(CONCAT('%', :q, '%'))
+                              OR LOWER(t.asset.symbol) LIKE LOWER(CONCAT('%', :q, '%')))
+            GROUP BY t.asset.id, t.asset.symbol, t.asset.name, t.asset.assetClass
+            ORDER BY ABS(SUM(t.amount)) DESC
+            """)
+    Page<AssetSummaryProjection> searchAssetStats(@Param("q") String q, Pageable pageable);
+
+    @Query("""
+            SELECT t.asset.id as id, t.asset.symbol as symbol, t.asset.name as name, t.asset.assetClass as assetClass,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
+                   ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
+                   COALESCE(SUM(t.amount), 0) as net,
+                   COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.asset IS NOT NULL
+            GROUP BY t.asset.id, t.asset.symbol, t.asset.name, t.asset.assetClass
+            ORDER BY ABS(SUM(t.amount)) DESC
+            """)
+    Page<AssetSummaryProjection> findAllAssetStats(Pageable pageable);
+
+    @Query("""
+            SELECT t FROM Transaction t
+            WHERE t.asset.id = :assetId
+              AND (:accountId IS NULL OR t.account.id = :accountId)
+            ORDER BY t.date DESC, t.datetime DESC
+            """)
+    Page<Transaction> findByAssetId(@Param("assetId") Long assetId,
+                                    @Param("accountId") Long accountId, Pageable pageable);
+
+    @Query("""
+            SELECT new com.manuelpuchner.backend.common.dto.EntityStatsDto(
+                COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0),
+                ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)),
+                COALESCE(SUM(t.amount), 0),
+                COUNT(t)
+            )
+            FROM Transaction t
+            WHERE t.asset.id = :assetId
+              AND (:accountId IS NULL OR t.account.id = :accountId)
+            """)
+    EntityStatsDto statsForAsset(@Param("assetId") Long assetId,
+                                 @Param("accountId") Long accountId);
+
+    // --- Merchant queries ---
+
+    @Query("""
+            SELECT t.merchantName as name,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
+                   ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
+                   COALESCE(SUM(t.amount), 0) as net,
+                   COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.merchantName IS NOT NULL
+              AND (:q IS NULL OR LOWER(t.merchantName) LIKE LOWER(CONCAT('%', :q, '%')))
+            GROUP BY t.merchantName
+            ORDER BY ABS(SUM(t.amount)) DESC
+            """)
+    Page<MerchantSummaryProjection> searchMerchantStats(@Param("q") String q, Pageable pageable);
+
+    @Query("""
+            SELECT t.merchantName as name,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
+                   ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
+                   COALESCE(SUM(t.amount), 0) as net,
+                   COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.merchantName IS NOT NULL
+            GROUP BY t.merchantName
+            ORDER BY ABS(SUM(t.amount)) DESC
+            """)
+    Page<MerchantSummaryProjection> findAllMerchantStats(Pageable pageable);
+
+    @Query("""
+            SELECT new com.manuelpuchner.backend.common.dto.EntityStatsDto(
+                COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0),
+                ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)),
+                COALESCE(SUM(t.amount), 0),
+                COUNT(t)
+            )
+            FROM Transaction t
+            WHERE t.merchantName = :name
+              AND (:accountId IS NULL OR t.account.id = :accountId)
+            """)
+    EntityStatsDto statsForMerchant(@Param("name") String name, @Param("accountId") Long accountId);
+
+    @Query("""
+            SELECT t FROM Transaction t
+            WHERE t.merchantName = :name
+              AND (:accountId IS NULL OR t.account.id = :accountId)
+            ORDER BY t.date DESC, t.datetime DESC
+            """)
+    Page<Transaction> findByMerchantName(@Param("name") String name,
+                                         @Param("accountId") Long accountId, Pageable pageable);
 
     // Candidate load for merchant alias retroactive pass
     @Query("""

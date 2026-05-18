@@ -39,6 +39,7 @@ public class TransactionMapper {
                 .fxInfo(toFxInfoDto(t.getFxInfo()))
                 .counterpartyInfo(toCounterpartyInfoDto(t))
                 .merchantName(t.getMerchantName())
+                .rawMerchantName(t.getRawMerchantName())
                 .mccCode(toMccCodeDto(t.getMccCode()))
                 .userCategory(toUserCategoryResponse(t.getUserCategory()))
                 .account(toAccountSummaryDto(t.getAccount()))
@@ -47,6 +48,7 @@ public class TransactionMapper {
                 .sepaMandateId(t.getSepaMandateId())
                 .sepaCreditorId(t.getSepaCreditorId())
                 .paymentMethod(t.getPaymentMethod())
+                .receiverReference(t.getReceiverReference())
                 .build();
     }
 

@@ -55,6 +55,8 @@ public class SparkasseTransactionDto {
 
     private String paymentMethod;
 
+    private String receiverReference;
+
     // -----------------------------------------------------------------------
 
     @Data

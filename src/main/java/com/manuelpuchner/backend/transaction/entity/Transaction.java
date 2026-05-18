@@ -91,6 +91,9 @@ public class Transaction {
     @Column(name = "merchant_name")
     private String merchantName;
 
+    @Column(name = "raw_merchant_name", length = 255)
+    private String rawMerchantName;
+
     // --- FX info (present when original_currency is set) ---
 
     @Embedded
@@ -130,6 +133,9 @@ public class Transaction {
 
     @Column(name = "payment_method")
     private String paymentMethod;
+
+    @Column(name = "receiver_reference", columnDefinition = "TEXT")
+    private String receiverReference;
 
     @Column(columnDefinition = "TEXT")
     private String note;
