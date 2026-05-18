@@ -1,0 +1,16 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: financials-tracker-2-ingress
+  namespace: financials-tracker-2
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`financials-tracker-2-backend.manuelpuchner.duckdns.org`)
+      kind: Rule
+      services:
+        - name: financials-tracker-2-service
+          port: 80
+  tls:
+    secretName: financials-tracker-2-tls

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: financials-tracker-2
+  name: financials-tracker-2-service
+  namespace: financials-tracker-2
+spec:
+  type: ClusterIP
+  selector:
+    app: financials-tracker-2
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+      name: http

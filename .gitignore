@@ -34,5 +34,4 @@ build/
 
 .env
 
-./k8s/app_secret.yaml
-
+/k8s/app_secret.yaml
