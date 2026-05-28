@@ -1,4 +1,7 @@
 spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   application:
     name: backend
   datasource:
@@ -39,3 +42,5 @@ app:
     password: ${JWT_PASSWORD:admin}
     jwt-secret: ${JWT_SECRET:changeme-use-a-long-random-secret-in-production}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+
