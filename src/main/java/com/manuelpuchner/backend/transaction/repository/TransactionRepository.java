@@ -8,7 +8,6 @@ import com.manuelpuchner.backend.dashboard.dto.TopMerchantDto;
 import com.manuelpuchner.backend.merchant.dto.MerchantSummaryProjection;
 import com.manuelpuchner.backend.transaction.entity.Category;
 import com.manuelpuchner.backend.transaction.entity.Transaction;
-import com.manuelpuchner.backend.transaction.entity.TransactionSource;
 import com.manuelpuchner.backend.transaction.entity.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -215,7 +214,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             SELECT t.asset.id as id, t.asset.symbol as symbol, t.asset.name as name, t.asset.assetClass as assetClass,
                    COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
                    ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
-                   COALESCE(SUM(t.amount), 0) as net,
+                   COALESCE(SUM(t.amount) - ABS(SUM(t.fee)), 0) as net,
                    COUNT(t) as transactionCount
             FROM Transaction t
             WHERE t.asset IS NOT NULL
@@ -230,7 +229,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             SELECT t.asset.id as id, t.asset.symbol as symbol, t.asset.name as name, t.asset.assetClass as assetClass,
                    COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as totalIncome,
                    ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)) as totalOutgoing,
-                   COALESCE(SUM(t.amount), 0) as net,
+                   COALESCE(SUM(t.amount) - ABS(SUM(t.fee)), 0) as net,
                    COUNT(t) as transactionCount
             FROM Transaction t
             WHERE t.asset IS NOT NULL
@@ -252,7 +251,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             SELECT new com.manuelpuchner.backend.common.dto.EntityStatsDto(
                 COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0),
                 ABS(COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0)),
-                COALESCE(SUM(t.amount), 0),
+                COALESCE(SUM(t.amount) - ABS(SUM(t.fee)), 0),
                 COUNT(t)
             )
             FROM Transaction t
